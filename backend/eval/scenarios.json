@@ -1,0 +1,278 @@
+[
+ {
+  "name": "paper room-rent example",
+  "request": {
+   "policy_start_date": "2024-04-01",
+   "claim_date": "2025-06-01",
+   "room_days": 5,
+   "non_payable_charges": 0,
+   "policy_id": "starcare-gold",
+   "description": "Knee replacement for osteoarthritis",
+   "continuous_coverage_months": 60,
+   "room_rent_per_day": 8000,
+   "associated_charges": 120000,
+   "other_charges": 160000
+  },
+  "facts": {
+   "procedure": "knee replacement",
+   "diagnosis": "osteoarthritis",
+   "pre_existing": false,
+   "coverage_months": 0
+  },
+  "rules": {
+   "sum_insured": {
+    "value": 500000,
+    "clause_id": "starcare-gold:2.1"
+   },
+   "room_rent_cap_per_day": {
+    "value": 5000,
+    "clause_id": "starcare-gold:3.1"
+   }
+  },
+  "expected": {
+   "status": "answered",
+   "verdict": "partially_payable",
+   "payable": "260000.00"
+  }
+ },
+ {
+  "name": "within cap, fully payable",
+  "request": {
+   "policy_start_date": "2024-04-01",
+   "claim_date": "2025-06-01",
+   "room_days": 5,
+   "non_payable_charges": 0,
+   "policy_id": "starcare-gold",
+   "description": "Appendectomy",
+   "continuous_coverage_months": 60,
+   "room_rent_per_day": 4000,
+   "associated_charges": 50000,
+   "other_charges": 50000
+  },
+  "facts": {
+   "procedure": "appendectomy",
+   "diagnosis": "appendicitis",
+   "pre_existing": false,
+   "coverage_months": 0
+  },
+  "rules": {
+   "sum_insured": {
+    "value": 500000,
+    "clause_id": "starcare-gold:2.1"
+   },
+   "room_rent_cap_per_day": {
+    "value": 5000,
+    "clause_id": "starcare-gold:3.1"
+   }
+  },
+  "expected": {
+   "status": "answered",
+   "verdict": "payable",
+   "payable": "120000.00"
+  }
+ },
+ {
+  "name": "copay and deductible",
+  "request": {
+   "policy_start_date": "2024-04-01",
+   "claim_date": "2025-06-01",
+   "room_days": 5,
+   "non_payable_charges": 0,
+   "policy_id": "securehealth-basic",
+   "description": "Dengue admission",
+   "continuous_coverage_months": 60,
+   "room_rent_per_day": 2500,
+   "associated_charges": 20000,
+   "other_charges": 40000
+  },
+  "facts": {
+   "procedure": "admission",
+   "diagnosis": "dengue",
+   "pre_existing": false,
+   "coverage_months": 0
+  },
+  "rules": {
+   "sum_insured": {
+    "value": 300000,
+    "clause_id": "securehealth-basic:2.1"
+   },
+   "room_rent_cap_per_day": {
+    "value": 3000,
+    "clause_id": "securehealth-basic:3.1"
+   },
+   "copay_percent": {
+    "value": 10,
+    "clause_id": "securehealth-basic:3.2"
+   },
+   "deductible": {
+    "value": 5000,
+    "clause_id": "securehealth-basic:3.3"
+   }
+  },
+  "expected": {
+   "status": "answered",
+   "verdict": "partially_payable",
+   "payable": "60750.00"
+  }
+ },
+ {
+  "name": "cataract sub-limit",
+  "request": {
+   "policy_start_date": "2024-04-01",
+   "claim_date": "2025-06-01",
+   "room_days": 5,
+   "non_payable_charges": 0,
+   "policy_id": "securehealth-basic",
+   "description": "Cataract surgery right eye",
+   "continuous_coverage_months": 36,
+   "room_rent_per_day": 0,
+   "associated_charges": 0,
+   "other_charges": 90000
+  },
+  "facts": {
+   "procedure": "cataract surgery",
+   "diagnosis": "cataract",
+   "pre_existing": false,
+   "coverage_months": 0
+  },
+  "rules": {
+   "sum_insured": {
+    "value": 300000,
+    "clause_id": "securehealth-basic:2.1"
+   },
+   "waiting_period_months": {
+    "value": 24,
+    "clause_id": "securehealth-basic:4.1"
+   },
+   "sub_limit": {
+    "procedure": "cataract",
+    "amount": 40000,
+    "clause_id": "securehealth-basic:3.4"
+   },
+   "deductible": {
+    "value": 5000,
+    "clause_id": "securehealth-basic:3.3"
+   },
+   "copay_percent": {
+    "value": 10,
+    "clause_id": "securehealth-basic:3.2"
+   }
+  },
+  "expected": {
+   "status": "answered",
+   "verdict": "partially_payable",
+   "payable": "31500.00"
+  }
+ },
+ {
+  "name": "excluded cosmetic",
+  "request": {
+   "policy_start_date": "2024-04-01",
+   "claim_date": "2025-06-01",
+   "room_days": 5,
+   "non_payable_charges": 0,
+   "policy_id": "starcare-gold",
+   "description": "Cosmetic surgery of the nose",
+   "continuous_coverage_months": 60,
+   "room_rent_per_day": 0,
+   "associated_charges": 0,
+   "other_charges": 100000
+  },
+  "facts": {
+   "procedure": "cosmetic surgery",
+   "diagnosis": "deviated septum",
+   "pre_existing": false,
+   "coverage_months": 0
+  },
+  "rules": {
+   "sum_insured": {
+    "value": 500000,
+    "clause_id": "starcare-gold:2.1"
+   },
+   "exclusion": {
+    "term": "cosmetic surgery",
+    "clause_id": "starcare-gold:5.1"
+   }
+  },
+  "expected": {
+   "status": "answered",
+   "verdict": "rejected",
+   "payable": "0.00"
+  }
+ },
+ {
+  "name": "PED within IRDAI 36-month cap",
+  "request": {
+   "policy_start_date": "2024-04-01",
+   "claim_date": "2025-06-01",
+   "room_days": 5,
+   "non_payable_charges": 0,
+   "policy_id": "starcare-gold",
+   "description": "Diabetes related hospitalisation, pre-existing diabetes",
+   "continuous_coverage_months": 40,
+   "room_rent_per_day": 0,
+   "associated_charges": 0,
+   "other_charges": 80000
+  },
+  "facts": {
+   "procedure": "hospitalisation",
+   "diagnosis": "diabetes",
+   "pre_existing": true,
+   "coverage_months": 0
+  },
+  "rules": {
+   "sum_insured": {
+    "value": 500000,
+    "clause_id": "starcare-gold:2.1"
+   },
+   "ped_waiting_months": {
+    "value": 48,
+    "clause_id": "starcare-gold:4.3"
+   },
+   "irdai_ped_cap_months": {
+    "value": 36,
+    "clause_id": "irdai-2024-master:1"
+   }
+  },
+  "expected": {
+   "status": "answered",
+   "verdict": "payable",
+   "payable": "80000.00"
+  }
+ },
+ {
+  "name": "restoration benefit -> abstain",
+  "request": {
+   "policy_start_date": "2024-04-01",
+   "claim_date": "2025-06-01",
+   "room_days": 5,
+   "non_payable_charges": 0,
+   "policy_id": "securehealth-basic",
+   "description": "Bypass surgery",
+   "continuous_coverage_months": 60,
+   "room_rent_per_day": 0,
+   "associated_charges": 0,
+   "other_charges": 200000
+  },
+  "facts": {
+   "procedure": "bypass",
+   "diagnosis": "cad",
+   "pre_existing": false,
+   "coverage_months": 0
+  },
+  "rules": {
+   "sum_insured": {
+    "value": 300000,
+    "clause_id": "securehealth-basic:2.1"
+   },
+   "unsupported": [
+    "restoration_benefit"
+   ]
+  },
+  "expected": {
+   "status": "abstained",
+   "verdict": null,
+   "payable": null
+  }
+ }
+]

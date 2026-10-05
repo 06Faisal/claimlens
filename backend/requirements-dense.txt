@@ -1,0 +1,2 @@
+# optional: CLAIMLENS_DENSE=1 enables dense embeddings fused with BM25
+sentence-transformers>=3,<6
