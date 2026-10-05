@@ -1,5 +1,7 @@
 # ClaimLens
 
+**Live demo:** https://claimlens-three.vercel.app
+
 Retrieval-augmented health insurance claim checker with verified citations. The LLM structures the case, extracts cited rule values and writes prose. **Code** computes the payout (Decimal, policy deduction order), verifies every citation, and abstains for human review when it cannot ground an answer.
 
 ```
