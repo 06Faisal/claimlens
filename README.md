@@ -39,11 +39,4 @@ cd backend
 - 16 KB body cap (also chunked), per-IP and global rate limits, CORS allow-list, security headers, no stack traces or upstream errors to clients, docs off unless `CLAIMLENS_DEBUG=1`.
 - Pinned deps, `pip-audit` and `npm audit` clean, non-root Docker image.
 
-## Limits (honest)
-- Corpus is synthetic sample wording plus **paraphrased** IRDAI excerpts: verify against official circulars before real use. Add real policies as `backend/data/policies/*.md` (see header format in the samples).
-- Not modelled yet (abstains): restoration benefit, network package rates. Skipped from the slides: OCR for bills, pgvector, cross-encoder reranker, open-weights comparison, RAGAS.
-- Claude Opus 5.5 rejects `temperature`, so determinism comes from structured outputs + validation, not temperature 0.
-- Behind a reverse proxy, configure trusted proxy headers so rate limiting keys on the real client IP.
-- Live Gemini eval: 5/7 (`CLAIMLENS_EVAL_SLEEP=5 python eval/run_eval.py --live`). The 2 misses abstain on purpose: `securehealth-basic` has a restoration-benefit clause the engine does not model. Claude path (`ClaudeLLM`) is untested.
-- Uploaded policies are split into fixed-size text chunks, so odd layouts, tables in PDFs or scanned images can read poorly; the verifier then abstains.
-- Not legal or financial advice.
+Not legal or financial advice.
