@@ -1,0 +1,3 @@
+{
+  "functions": { "index.py": { "includeFiles": "data/**", "maxDuration": 60 } }
+}

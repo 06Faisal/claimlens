@@ -1,7 +1,7 @@
 """Pydantic models. Request limits live here: this is the trust boundary."""
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -19,6 +19,8 @@ class AssessRequest(BaseModel):
     description: str = Field(min_length=3, max_length=2000)
     policy_start_date: date  # latest issue/renewal date: selects which IRDAI rule versions apply
     claim_date: date
+    # Uploaded policy text, held by the browser (stateless server). Only with policy_id "upload-...".
+    policy_chunks: Optional[list[Annotated[str, Field(min_length=1, max_length=2000)]]] = Field(default=None, max_length=400)
     pre_existing: Optional[bool] = None  # user-stated; overrides what the model infers from the text
     continuous_coverage_months: int = Field(ge=0, le=600)
     room_rent_per_day: Decimal = money()
@@ -29,6 +31,8 @@ class AssessRequest(BaseModel):
 
     @model_validator(mode="after")
     def _dates(self):
+        if self.policy_chunks is not None and not self.policy_id.startswith("upload-"):
+            raise ValueError("policy_chunks need an upload- policy_id")
         if self.claim_date < self.policy_start_date:
             raise ValueError("claim_date before policy_start_date")
         if self.claim_date - self.policy_start_date > timedelta(days=366 * 50):

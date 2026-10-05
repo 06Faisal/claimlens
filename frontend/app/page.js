@@ -57,7 +57,7 @@ export default function Page() {
       const r = await fetch("/api/policies/upload", { method: "POST", body });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(r.status === 429 ? "Too many uploads. Please wait a minute." : r.status === 413 ? "That file is larger than 5 MB." : j.detail || "We could not read that file.");
-      setPolicy({ id: j.policy_id, name: j.name, uploaded: true });
+      setPolicy({ id: j.policy_id, name: j.name, uploaded: true, chunks: j.chunks });
     } catch (x) { setUpErr(x.message || "Upload failed. Please try again."); } finally { setUpBusy(false); }
   }
 
@@ -70,7 +70,7 @@ export default function Page() {
     if (missing.length) { setErr(`Almost there: please ${missing[0]}.`); return; }
     setBusy(true); setErr(""); setRes(null);
     const body = {
-      policy_id: policy.id, description: f.description, pre_existing: f.pre === "yes" ? true : f.pre === "no" ? false : null,
+      policy_id: policy.id, ...(policy.chunks && { policy_chunks: policy.chunks }), description: f.description, pre_existing: f.pre === "yes" ? true : f.pre === "no" ? false : null,
       policy_start_date: f.renewed || f.bought, claim_date: f.admitted, continuous_coverage_months: monthsBetween(f.bought, f.admitted),
       room_rent_per_day: Number(f.rent || 0), room_days: Number(f.days || 0), associated_charges: Number(f.fees || 0),
       other_charges: Number(f.other || 0), non_payable_charges: Number(f.nonpay || 0),
@@ -115,7 +115,7 @@ export default function Page() {
                   <input ref={fileRef} type="file" hidden accept=".pdf,.docx,.txt,.md,application/pdf" onChange={(e) => { upload(e.target.files[0]); e.target.value = ""; }} />
                 </div>
                 {upErr && <p role="alert" className="error">{upErr}</p>}
-                <p className="hint">Your file is read in memory and removed within an hour. It is never saved to disk.</p>
+                <p className="hint">Your file is read once and kept only in this browser tab. Our server does not store it.</p>
                 {samples.length > 0 && (
                   <p className="samples">No document handy? Try a sample:{" "}
                     {samples.map((s) => <button type="button" key={s.id} className="chip" onClick={() => setPolicy({ id: s.id, name: clean(s.name) })}>{clean(s.name)}</button>)}</p>

@@ -4,8 +4,6 @@ import re
 from typing import Optional
 
 import hashlib
-import time
-from collections import OrderedDict
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,13 +16,12 @@ from .ingest import load_corpus, policy_ids
 from .llm import LLM
 from .pipeline import assess
 from .schemas import Assessment, AssessRequest
-from .upload import MAX_FILE, UploadError, extract_text, to_clauses
+from .upload import MAX_FILE, UploadError, clauses_from_chunks, extract_text, to_chunks
 
 MAX_BODY = 16 * 1024
 UPLOAD_PATH = "/policies/upload"
 MAX_UPLOAD_BODY = MAX_FILE + 64 * 1024  # multipart overhead
-UPLOAD_KEEP = 50  # newest uploads kept in memory
-UPLOAD_TTL = 3600
+MAX_ASSESS_UPLOAD_BODY = 1024 * 1024  # /assess carrying uploaded policy chunks
 log = logging.getLogger("claimlens")
 
 HEADERS = [
@@ -46,7 +43,7 @@ class SecurityMiddleware:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         size = 0
-        cap = MAX_UPLOAD_BODY if scope["path"] == UPLOAD_PATH else MAX_BODY
+        cap = {UPLOAD_PATH: MAX_UPLOAD_BODY, "/assess": MAX_ASSESS_UPLOAD_BODY}.get(scope["path"], MAX_BODY)
 
         async def limited_receive():
             nonlocal size
@@ -75,7 +72,6 @@ def create_app(llm: Optional[LLM] = None) -> FastAPI:
     valid = policy_ids(corpus)
     limiter = Limiter(key_func=get_remote_address, default_limits=[])  # ponytail: behind a proxy, key on X-Forwarded-For via trusted-proxy config
     state = {"llm": llm}
-    uploads: OrderedDict = OrderedDict()  # policy_id -> (expiry, name, clauses); in memory only
 
     origins = [o for o in os.environ.get("CLAIMLENS_CORS_ORIGINS", "http://localhost:3000").split(",") if o]
     app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["content-type"])
@@ -107,12 +103,6 @@ def create_app(llm: Optional[LLM] = None) -> FastAPI:
     def policies():
         return sorted(valid)
 
-    def _uploads():
-        now = time.time()
-        for k in [k for k, v in uploads.items() if v[0] < now]:
-            del uploads[k]
-        return uploads
-
     @app.get("/samples")
     def samples():
         names = {c.doc_id: c.title.rsplit(", ", 1)[0] for c in corpus.values() if c.kind == "policy"}
@@ -130,22 +120,17 @@ def create_app(llm: Optional[LLM] = None) -> FastAPI:
             raise HTTPException(422, str(e))
         pid = "upload-" + hashlib.sha256(text.encode()).hexdigest()[:12]
         name = re.sub(r"[^\w .()-]", "", (file.filename or "Your policy").rsplit(".", 1)[0])[:60].strip() or "Your policy"
-        up = _uploads()
-        up[pid] = (time.time() + UPLOAD_TTL, name, to_clauses(text, pid, name))
-        while len(up) > UPLOAD_KEEP:
-            up.popitem(last=False)
-        return {"policy_id": pid, "name": name, "parts": len(up[pid][2])}
+        return {"policy_id": pid, "name": name, "chunks": to_chunks(text)}  # nothing stored server-side
 
     @app.post("/assess", response_model=Assessment)
     @limiter.limit(os.environ.get("CLAIMLENS_GLOBAL_RATE", "300/hour"), key_func=lambda: "global")  # caps total LLM spend
     @limiter.limit(os.environ.get("CLAIMLENS_RATE", "10/minute"))
     def assess_endpoint(request: Request, req: AssessRequest):
-        if req.policy_id in valid:
-            return assess(req, corpus, get_llm())
-        up = _uploads().get(req.policy_id)
-        if not up:
+        if req.policy_chunks is not None:
+            return assess(req, {**corpus, **clauses_from_chunks(req.policy_chunks, req.policy_id)}, get_llm())
+        if req.policy_id not in valid:
             raise HTTPException(422, "unknown policy_id")
-        return assess(req, {**corpus, **up[2]}, get_llm())
+        return assess(req, corpus, get_llm())
 
     app.state.limiter = limiter
     return app

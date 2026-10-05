@@ -20,7 +20,7 @@ Put `GEMINI_API_KEY=...` (default model `gemini-3.1-flash-lite`, free tier) or `
 No key? `python eval/demo_server.py` serves a canned demo (paper's room-rent example, select `starcare-gold`).
 
 ## Using it
-Pick a sample policy or drop your own PDF, Word (.docx) or text file (5 MB max, text-based, not scanned). Uploads live in memory for an hour and are never written to disk. Answer the plain-language questions and read the estimate; if the policy is unclear the app says so instead of guessing.
+Pick a sample policy or drop your own PDF, Word (.docx) or text file (5 MB max, text-based, not scanned). The server keeps no copy: the extracted text stays in your browser and is sent with each check. Answer the plain-language questions and read the estimate; if the policy is unclear the app says so instead of guessing.
 
 ## Test / evaluate
 ```bash

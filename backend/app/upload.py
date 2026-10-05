@@ -8,7 +8,9 @@ from datetime import date
 from .ingest import Clause
 
 MAX_FILE = 5 * 1024 * 1024
-MAX_TEXT = 400_000
+MAX_TEXT = 300_000
+MAX_CHUNKS = 400
+MAX_CHUNK_LEN = 2000
 MAX_PAGES = 150
 CHUNK = 900
 
@@ -64,16 +66,14 @@ def extract_text(data: bytes) -> str:
     return text[:MAX_TEXT]
 
 
-def to_clauses(text: str, doc_id: str, name: str) -> dict[str, Clause]:
+def to_chunks(text: str) -> list[str]:
     # ponytail: fixed-size paragraph chunks, no heading detection; add layout-aware sectioning if retrieval misses clauses
-    out, buf, n = {}, "", 0
+    out, buf = [], ""
 
     def flush():
-        nonlocal buf, n
+        nonlocal buf
         if buf.strip():
-            n += 1
-            cid = f"{doc_id}:s{n}"
-            out[cid] = Clause(cid, doc_id, "policy", date(1900, 1, 1), f"{name}, part {n}", " ".join(buf.split()))
+            out.append(" ".join(buf.split()))
         buf = ""
 
     for para in re.split(r"\n\s*\n|\n(?=\s*\d+(?:\.\d+)*[.)]?\s+[A-Z])", text):
@@ -87,4 +87,12 @@ def to_clauses(text: str, doc_id: str, name: str) -> dict[str, Clause]:
             flush()
         buf += para + "\n"
     flush()
+    return out[:MAX_CHUNKS]
+
+
+def clauses_from_chunks(chunks: list[str], doc_id: str, name: str = "Your policy") -> dict[str, Clause]:
+    out = {}
+    for n, t in enumerate(chunks, 1):
+        cid = f"{doc_id}:s{n}"
+        out[cid] = Clause(cid, doc_id, "policy", date(1900, 1, 1), f"{name}, part {n}", t)
     return out

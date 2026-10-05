@@ -42,9 +42,10 @@ def test_txt_upload_then_assess_uses_uploaded_clauses():
     c = client()
     r = up(c, "My Policy.txt", POLICY.encode())
     assert r.status_code == 200 and r.json()["name"] == "My Policy"
-    pid = r.json()["policy_id"]
+    pid, chunks = r.json()["policy_id"], r.json()["chunks"]
+    assert chunks and "Sum Insured" in chunks[0]
     # mock cites a clause id that does not exist in the upload -> must abstain, proving uploads reach the verifier
-    body = dict(policy_id=pid, description="knee surgery", policy_start_date="2024-04-01", claim_date="2025-06-01",
+    body = dict(policy_id=pid, policy_chunks=chunks, description="knee surgery", policy_start_date="2024-04-01", claim_date="2025-06-01",
                 continuous_coverage_months=60, room_rent_per_day=1000, room_days=2, associated_charges=1000, other_charges=1000,
                 non_payable_charges=0)
     assert c.post("/assess", json=body).json()["status"] == "abstained"
@@ -69,3 +70,11 @@ def test_rejects_junk_big_and_empty():
 
 def test_samples_have_names():
     assert any(s["name"].startswith("StarCare") for s in client().get("/samples").json())
+
+
+def test_chunks_need_upload_id_and_unknown_id_without_chunks_rejected():
+    c = client()
+    base = dict(description="knee surgery", policy_start_date="2024-04-01", claim_date="2025-06-01", continuous_coverage_months=60,
+                room_rent_per_day=1000, room_days=2, associated_charges=1000, other_charges=1000, non_payable_charges=0)
+    assert c.post("/assess", json={**base, "policy_id": "starcare-gold", "policy_chunks": ["x"]}).status_code == 422
+    assert c.post("/assess", json={**base, "policy_id": "upload-abc"}).status_code == 422
