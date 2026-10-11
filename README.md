@@ -27,7 +27,7 @@ Pick a sample policy or drop your own PDF, Word (.docx) or text file (5 MB max, 
 ## Test / evaluate
 ```bash
 cd backend
-.venv/Scripts/python -m pytest -q          # 39 tests: engine, verifier, pipeline, API hardening
+.venv/Scripts/python -m pytest -q          # 43 tests: engine, verifier, pipeline, API hardening
 .venv/Scripts/python eval/run_eval.py      # 7 hand-solved scenarios, oracle extraction (engine+verifier)
 .venv/Scripts/python eval/run_eval.py --live   # real Claude extraction, needs key
 .venv/Scripts/python -m pip_audit -r requirements.txt
@@ -36,7 +36,8 @@ cd backend
 ## Security design
 - Strict Pydantic request model (`extra=forbid`, numeric/length/date bounds, no NaN); policy id is looked up, never used as a path.
 - Untrusted text only inside `<claim_description>`; LLM output is schema-validated, then each cited clause id and value is checked against retrieved text in code. The LLM cannot change money or the verdict. Prose with unknown citations or invented amounts is replaced by a template.
-- 16 KB body cap (also chunked), per-IP and global rate limits, CORS allow-list, security headers, no stack traces or upstream errors to clients, docs off unless `CLAIMLENS_DEBUG=1`.
+- Policy uploads (PDF, DOCX, TXT/MD, 5 MB): type decided by file contents, never by name; parsed for text only (never rendered or executed) and never stored; files with active content (PDF JavaScript/launch/embedded files, Word macros/OLE/external templates, nested archives, executables, HTML/script text) are rejected; page, zip-entry and expansion caps. No antivirus engine is involved: safety comes from strict allow-listing and never executing the file.
+- 16 KB body cap on API calls (1 MB when carrying uploaded policy text, 5 MB on upload, also enforced for chunked bodies), per-IP and global rate limits (set `CLAIMLENS_TRUST_PROXY=1` behind a trusted proxy such as Vercel), CORS allow-list, security headers, no stack traces or upstream errors to clients, docs off unless `CLAIMLENS_DEBUG=1`.
 - Pinned deps, `pip-audit` and `npm audit` clean, non-root Docker image.
 
 Not legal or financial advice.

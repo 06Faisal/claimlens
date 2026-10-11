@@ -51,6 +51,10 @@ export default function Page() {
 
   async function upload(file) {
     if (!file) return;
+    // Quick checks for a friendly message; the server re-checks everything and is the real gate.
+    if (!/\.(pdf|docx|txt|md)$/i.test(file.name)) { setUpErr("Please upload a PDF, Word (.docx) or text (.txt) file."); return; }
+    if (file.size > 5 * 1024 * 1024) { setUpErr("That file is larger than 5 MB."); return; }
+    if (file.size === 0) { setUpErr("That file is empty."); return; }
     setUpBusy(true); setUpErr(""); setRes(null);
     try {
       const body = new FormData(); body.append("file", file);

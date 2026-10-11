@@ -65,12 +65,22 @@ class SecurityMiddleware:
         await self.app(scope, limited_receive, send_wrapped)
 
 
+def client_ip(request: Request) -> str:
+    """Behind a trusted proxy (CLAIMLENS_TRUST_PROXY=1, e.g. Vercel) the real client is the first X-Forwarded-For hop;
+    otherwise that header is attacker-controlled and ignored."""
+    if os.environ.get("CLAIMLENS_TRUST_PROXY") == "1":
+        fwd = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        if fwd:
+            return fwd
+    return get_remote_address(request)
+
+
 def create_app(llm: Optional[LLM] = None) -> FastAPI:
     debug = os.environ.get("CLAIMLENS_DEBUG") == "1"
     app = FastAPI(title="ClaimLens", docs_url="/docs" if debug else None, redoc_url=None, openapi_url="/openapi.json" if debug else None)
     corpus = load_corpus()
     valid = policy_ids(corpus)
-    limiter = Limiter(key_func=get_remote_address, default_limits=[])  # ponytail: behind a proxy, key on X-Forwarded-For via trusted-proxy config
+    limiter = Limiter(key_func=client_ip, default_limits=[])
     state = {"llm": llm}
 
     origins = [o for o in os.environ.get("CLAIMLENS_CORS_ORIGINS", "http://localhost:3000").split(",") if o]
