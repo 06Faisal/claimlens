@@ -39,15 +39,6 @@ def _inr(x) -> str:
     return "₹" + d + (f".{int(frac * 100):02d}" if frac else "")
 
 
-def _share_note(rules: Rules) -> str:
-    parts = []
-    if rules.deductible:
-        parts.append(f"You pay the first {_inr(rules.deductible.value)} of each claim yourself (deductible)")
-    if rules.copay_percent:
-        parts.append(f"then you pay {rules.copay_percent.value:f}% of the rest (co-payment)" if parts else f"You pay {rules.copay_percent.value:f}% of the claim (co-payment)")
-    return (", ".join(parts) + ".") if parts else "Your policy has no deductible or co-payment."
-
-
 def compute(rules: Rules, facts: Facts, bill: Bill) -> Optional[Outcome]:
     """Return None when the case cannot be decided (caller abstains)."""
     room = bill.room_rent_per_day * bill.room_days
@@ -107,15 +98,21 @@ def compute(rules: Rules, facts: Facts, bill: Bill) -> Optional[Outcome]:
         steps.append(Step(name="Sub-limit", amount_after=_q(payable), note="No special limit applies to this treatment."))
 
     # 5. deductible, then co-pay
-    ids = []
+    ids, parts, start = [], [], payable
     if rules.deductible:
-        payable = max(ZERO, payable - rules.deductible.value)
+        taken = min(payable, rules.deductible.value)
+        payable -= taken
         ids.append(rules.deductible.clause_id)
+        parts.append(f"The first {_inr(taken)} of the claim is yours to pay. Your policy calls this the deductible.")
     if rules.copay_percent:
-        payable -= payable * rules.copay_percent.value / 100
+        share = payable * rules.copay_percent.value / 100
+        payable -= share
         ids.append(rules.copay_percent.clause_id)
+        parts.append(f"Of the {_inr(payable + share)} left, you also pay {rules.copay_percent.value:f}% ({_inr(share)}), called the co-payment. The insurer pays the rest.")
+    if parts:
+        parts.append(f"Together, you pay {_inr(start - payable)} here.")
     cites += ids
-    steps.append(Step(name="Deductible and co-pay", amount_after=_q(payable), note=_share_note(rules), clause_ids=ids))
+    steps.append(Step(name="Deductible and co-pay", amount_after=_q(payable), note=" ".join(parts) or "Your policy has no deductible or co-payment.", clause_ids=ids))
 
     # 6. sum insured
     capped = payable > rules.sum_insured.value
