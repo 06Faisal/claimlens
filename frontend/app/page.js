@@ -186,7 +186,7 @@ export default function Page() {
               <p className="amount">{inr(pay)}</p>
               <p className="sub">of {inr(claimed)} billed. You pay about {inr(claimed - pay)}.</p>
               <div className="bar" role="img" aria-label={`Insurer pays ${inr(pay)}, you pay ${inr(claimed - pay)}`}><i style={{ width: `${claimed ? (pay / claimed) * 100 : 0}%` }} /></div>
-              <p>{res.explanation}</p>
+              {res.explanation && <p>{res.explanation}</p>}
               <h3>Why this amount?</h3>
               <p className="hint">We start with your full bill and take things off, one step at a time. What is left at the end is what your insurer pays.</p>
               <ol className="steps">

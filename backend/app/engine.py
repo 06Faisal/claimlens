@@ -36,7 +36,7 @@ def _inr(x) -> str:
     whole, frac = divmod(abs(x), 1)
     d = str(int(whole))
     d = d if len(d) <= 3 else (",".join([d[:-3][::-1][i:i + 2][::-1] for i in range(0, len(d[:-3]), 2)][::-1]) + "," + d[-3:])
-    return "Rs. " + d + (f".{int(frac * 100):02d}" if frac else "")
+    return "₹" + d + (f".{int(frac * 100):02d}" if frac else "")
 
 
 def _share_note(rules: Rules) -> str:

@@ -29,7 +29,7 @@ def _safe_explanation(text: str, outcome: Outcome) -> Optional[str]:
 
 
 def _template(outcome: Outcome) -> str:
-    return "Each step below shows how this amount was reached, with the policy lines it relies on."
+    return ""  # the UI already shows the amount and every step, so no filler sentence when the model prose is rejected
 
 
 def assess(req: AssessRequest, corpus: dict[str, Clause], llm: LLM) -> Assessment:
