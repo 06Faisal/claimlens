@@ -27,7 +27,7 @@ Pick a sample policy or drop your own PDF, Word (.docx) or text file (5 MB max, 
 ## Test / evaluate
 ```bash
 cd backend
-.venv/Scripts/python -m pytest -q          # 43 tests: engine, verifier, pipeline, API hardening
+.venv/Scripts/python -m pytest -q          # 48 tests: engine, verifier, pipeline, API hardening
 .venv/Scripts/python eval/run_eval.py      # 7 hand-solved scenarios, oracle extraction (engine+verifier)
 .venv/Scripts/python eval/run_eval.py --live   # real Claude extraction, needs key
 .venv/Scripts/python -m pip_audit -r requirements.txt

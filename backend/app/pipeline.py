@@ -48,8 +48,12 @@ def assess(req: AssessRequest, corpus: dict[str, Clause], llm: LLM) -> Assessmen
         log.warning("llm step failed: %s", type(e).__name__)
         return abstain("The analysis service could not complete.")
 
-    if rules.unsupported:
-        return abstain(f"Policy features not yet modelled: {', '.join(rules.unsupported)}.")
+    total = (req.room_rent_per_day * req.room_days + req.associated_charges + req.other_charges + req.non_payable_charges)
+    # Restoration only applies after the sum insured is exhausted, so it cannot change a bill that fits inside it.
+    # ponytail: ignores earlier claims this policy year; model prior claims if that matters.
+    unsupported = [u for u in rules.unsupported if not (u == "restoration_benefit" and total <= rules.sum_insured.value)]
+    if unsupported:
+        return abstain(f"Policy features not yet modelled: {', '.join(unsupported)}.")
     problems = verify(rules, facts, {c.id: c for c in clauses})
     if problems:
         log.info("verification failed: %s", problems)
@@ -59,7 +63,7 @@ def assess(req: AssessRequest, corpus: dict[str, Clause], llm: LLM) -> Assessmen
                 other=req.other_charges, non_payable=req.non_payable_charges)
     outcome = compute(rules, facts, bill)
     if outcome is None:
-        return abstain("Pre-existing condition status is unclear from the description.")
+        return abstain("We could not tell whether this condition existed before you bought the policy. Please answer Yes or No in step 2.")
     if any(i not in corpus for i in outcome.clause_ids):
         return abstain(UNVERIFIED)
     cite_clauses = [corpus[i] for i in outcome.clause_ids]

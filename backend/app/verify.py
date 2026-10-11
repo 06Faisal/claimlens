@@ -25,6 +25,18 @@ def numbers_in(text: str) -> set[Decimal]:
     return out
 
 
+_GENERIC = {"treatment", "surgery", "procedure", "therapy", "disease", "diseases", "condition", "care", "replacement", "unless"}
+
+
+def term_in_case(term: str, case_text: str) -> bool:
+    """Exclusion term must be reflected in the claim facts. Accept the phrase, or its distinctive word(s)
+    ("cosmetic surgery" matches procedure "nose reshaping" + diagnosis "cosmetic"); generic words never match alone."""
+    if term in case_text:
+        return True
+    words = [w for w in re.findall(r"[a-z]{5,}", term) if w not in _GENERIC]
+    return bool(words) and any(w in case_text for w in words)
+
+
 def verify(rules: Rules, facts: Facts, clauses: dict[str, Clause]) -> list[str]:
     problems = []
 
@@ -53,7 +65,7 @@ def verify(rules: Rules, facts: Facts, clauses: dict[str, Clause]) -> list[str]:
         t = rules.exclusion.term.lower()
         if c and t not in c.text.lower():
             problems.append(f"exclusion term {t!r} not in {c.id}")
-        if t not in case_text:
+        if not term_in_case(t, case_text):
             problems.append(f"exclusion term {t!r} not in the claim facts")
     if rules.sub_limit:
         sl = rules.sub_limit

@@ -49,7 +49,8 @@ def test_value_not_in_clause_abstains():
 
 
 def test_unsupported_feature_abstains():
-    assert assess(req(), CORPUS, MockLLM(facts(), rules(unsupported=["restoration_benefit"]))).status == "abstained"
+    # package rates always abstain; restoration only when the bill exceeds the sum insured (see test_regressions)
+    assert assess(req(), CORPUS, MockLLM(facts(), rules(unsupported=["package_rate"]))).status == "abstained"
 
 
 def test_irdai_rule_not_visible_before_effective_date():
