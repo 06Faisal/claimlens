@@ -85,6 +85,7 @@ class Step(BaseModel):
     amount_after: Decimal
     note: str
     clause_ids: list[str] = []
+    calc: list[str] = []  # the arithmetic, one plain line per sum, so the user can follow it
 
 
 class Outcome(BaseModel):

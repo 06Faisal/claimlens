@@ -195,7 +195,8 @@ export default function Page() {
                   const before = i === 0 ? claimed : Number(res.steps[i - 1].amount_after);
                   const off = before - Number(s.amount_after);
                   return (
-                    <li key={i}><div><strong>{STEP_TITLE[s.name] || s.name}</strong><span>{s.note}</span></div>
+                    <li key={i}><div><strong>{STEP_TITLE[s.name] || s.name}</strong><span>{s.note}</span>
+                        {s.calc?.length > 0 && <ul className="calc">{s.calc.map((c, k) => <li key={k}>{c.replace(/ x /g, " × ").replace(/ - /g, " − ")}</li>)}</ul>}</div>
                       <b className={off > 0 ? "off" : "same"}>{off > 0 ? `− ${inr(off)}` : "no change"}</b></li>
                   );
                 })}

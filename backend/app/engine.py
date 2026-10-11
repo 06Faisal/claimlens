@@ -72,54 +72,79 @@ def compute(rules: Rules, facts: Facts, bill: Bill) -> Optional[Outcome]:
                       clause_ids=[i for _, ids in waits for i in ids]))
 
     # 2. non-payables
+    before = claimed
     payable = claimed - bill.non_payable
-    steps.append(Step(name="Non-payables", amount_after=_q(payable), note=(f"{_inr(bill.non_payable)} of the bill is for items no policy pays for." if bill.non_payable else "Nothing on your bill is in this group.")))
+    steps.append(Step(name="Non-payables", amount_after=_q(payable),
+                      note=("Some items on the bill are never paid by any policy." if bill.non_payable else "Nothing on your bill is in this group."),
+                      calc=[f"{_inr(before)} - {_inr(bill.non_payable)} = {_inr(payable)}"] if bill.non_payable else []))
 
     # 3. room rent: proportionate deduction on room + associated costs only
+    before = payable
     cap = rules.room_rent_cap_per_day
     if cap and bill.room_rent_per_day > cap.value:
         ratio = cap.value / bill.room_rent_per_day
-        payable -= (room + bill.associated) * (1 - ratio)
+        pct = _q(ratio * 100).normalize()
+        base = room + bill.associated
+        cut = base * (1 - ratio)
+        payable -= cut
         ids = [cap.clause_id, PROP_DEDUCTION_CLAUSE]
         cites += ids
         steps.append(Step(name="Room rent", amount_after=_q(payable), clause_ids=ids,
-                          note=(f"Your policy allows {_inr(cap.value)} a day but the room cost {_inr(bill.room_rent_per_day)} a day, so room, doctor and nursing charges are paid at {_q(ratio * 100).normalize():f}%. "
-                                f"Medicines, implants and tests are not reduced.")))
+                          note=f"Your policy allows {_inr(cap.value)} a day but the room cost {_inr(bill.room_rent_per_day)} a day, so room, doctor and nursing charges are paid only in proportion. "
+                               f"Medicines, implants and tests are not reduced.",
+                          calc=[f"Room: {_inr(bill.room_rent_per_day)} x {bill.room_days} days = {_inr(room)}",
+                                f"Room + doctor and nursing fees: {_inr(room)} + {_inr(bill.associated)} = {_inr(base)}",
+                                f"Share your policy pays: {_inr(cap.value)} / {_inr(bill.room_rent_per_day)} = {pct:f}%",
+                                f"Paid: {_inr(base)} x {pct:f}% = {_inr(base - cut)}",
+                                f"Not paid: {_inr(base)} - {_inr(base - cut)} = {_inr(cut)}",
+                                f"Medicines, implants and tests ({_inr(bill.other)}): paid in full",
+                                f"Bill after this step: {_inr(before)} - {_inr(cut)} = {_inr(payable)}"]))
     else:
-        steps.append(Step(name="Room rent", amount_after=_q(payable), note="Your room is within the policy's daily limit."))
+        steps.append(Step(name="Room rent", amount_after=_q(payable), note="Your room is within the policy's daily limit, so nothing is reduced."))
 
     # 4. sub-limit
     sl = rules.sub_limit
     if sl and payable > sl.amount:
+        before = payable
         payable = sl.amount
         cites.append(sl.clause_id)
-        steps.append(Step(name="Sub-limit", amount_after=_q(payable), note=f"Your policy pays at most {_inr(sl.amount)} for {sl.procedure}.", clause_ids=[sl.clause_id]))
+        steps.append(Step(name="Sub-limit", amount_after=_q(payable), note=f"Your policy pays at most {_inr(sl.amount)} for {sl.procedure}.", clause_ids=[sl.clause_id],
+                          calc=[f"{_inr(before)} is more than the limit, so the insurer pays {_inr(sl.amount)}"]))
     else:
         steps.append(Step(name="Sub-limit", amount_after=_q(payable), note="No special limit applies to this treatment."))
 
     # 5. deductible, then co-pay
-    ids, parts, start = [], [], payable
+    ids, calc, start = [], [], payable
     if rules.deductible:
         taken = min(payable, rules.deductible.value)
         payable -= taken
         ids.append(rules.deductible.clause_id)
-        parts.append(f"The first {_inr(taken)} of the claim is yours to pay. Your policy calls this the deductible.")
+        calc.append(f"Deductible (you pay first): {_inr(start)} - {_inr(taken)} = {_inr(payable)} left")
+    left = payable
     if rules.copay_percent:
-        share = payable * rules.copay_percent.value / 100
+        share = left * rules.copay_percent.value / 100
         payable -= share
         ids.append(rules.copay_percent.clause_id)
-        parts.append(f"Of the {_inr(payable + share)} left, you also pay {rules.copay_percent.value:f}% ({_inr(share)}), called the co-payment. The insurer pays the rest.")
-    if parts:
-        parts.append(f"Together, you pay {_inr(start - payable)} here.")
+        calc.append(f"Co-payment (your % of what is left): {rules.copay_percent.value:f}% of {_inr(left)} = {_inr(share)}")
+        calc.append(f"Insurer pays: {_inr(left)} - {_inr(share)} = {_inr(payable)}")
+    if calc:
+        calc.append(f"You pay in this step: {_inr(start)} - {_inr(payable)} = {_inr(start - payable)}")
     cites += ids
-    steps.append(Step(name="Deductible and co-pay", amount_after=_q(payable), note=" ".join(parts) or "Your policy has no deductible or co-payment.", clause_ids=ids))
+    steps.append(Step(name="Deductible and co-pay", amount_after=_q(payable),
+                      note=("Your policy makes you pay a fixed amount first (the deductible), then a percentage of the rest (the co-payment)." if calc
+                            else "Your policy has no deductible or co-payment."),
+                      calc=calc, clause_ids=ids))
 
     # 6. sum insured
     capped = payable > rules.sum_insured.value
+    si = rules.sum_insured.value
     if capped:
-        payable = rules.sum_insured.value
+        calc = [f"{_inr(payable)} is more than the yearly maximum, so the insurer pays {_inr(si)}"]
+        payable = si
         cites.append(rules.sum_insured.clause_id)
-    steps.append(Step(name="Sum insured", amount_after=_q(payable), note=(f"The most your policy pays in a year is {_inr(rules.sum_insured.value)}, so the amount is capped." if capped else f"Within the most your policy pays in a year ({_inr(rules.sum_insured.value)})."), clause_ids=[rules.sum_insured.clause_id]))
+    else:
+        calc = [f"{_inr(payable)} is within the yearly maximum of {_inr(si)}"]
+    steps.append(Step(name="Sum insured", amount_after=_q(payable), note="The most your policy pays in one year.", calc=calc, clause_ids=[rules.sum_insured.clause_id]))
 
     payable = _q(max(ZERO, payable))
     # reached only when nothing excluded the claim: a zero here means the bill is within the deductible, not "not covered"

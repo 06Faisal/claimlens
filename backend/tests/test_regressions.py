@@ -63,4 +63,4 @@ def test_bill_within_deductible_pays_nothing_but_is_not_reported_as_rejected():
             deductible=Cited(value=D(5000), clause_id="securehealth-basic:3.3"),
             copay_percent=Cited(value=D(10), clause_id="securehealth-basic:3.2"))
     assert a.status == "answered" and a.payable == D("0.00") and a.verdict == "partially_payable"
-    assert "yours to pay" in a.steps[4].note
+    assert a.steps[4].calc[0].startswith("Deductible") and "= ₹0 left" in a.steps[4].calc[0]
