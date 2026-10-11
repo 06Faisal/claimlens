@@ -58,3 +58,6 @@ details { margin-top:18px; border-top:1px solid var(--line); padding-top:12px; }
 blockquote { margin:12px 0; padding:4px 0 4px 14px; border-left:3px solid var(--line); color:var(--muted); font-size:.9rem; } blockquote strong { display:block; color:var(--fg); }
 .note { margin-top:18px; font-size:.8rem; color:var(--muted); }
 @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .5s ease; } }
+.steps li.start, .steps li.end { border-top:0; padding:8px 0; font-size:1.02rem; } .steps li.end { border-top:2px solid var(--fg); margin-top:4px; padding-top:12px; }
+.steps b.off { color:var(--bad); } .steps b.same { color:var(--muted); font-weight:500; font-size:.88rem; }
+.steps li div { max-width:34em; }

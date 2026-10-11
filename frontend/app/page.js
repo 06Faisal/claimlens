@@ -9,6 +9,11 @@ const monthsBetween = (a, b) => {
   return Math.max(0, (y2 - y1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0));
 };
 
+const STEP_TITLE = {
+  "Eligibility": "Is this treatment covered?", "Non-payables": "Items no policy pays for", "Room rent": "Room rent limit",
+  "Sub-limit": "Limit for this treatment", "Deductible and co-pay": "Your own share", "Sum insured": "Yearly maximum",
+};
+
 const VERDICT = {
   payable: ["Fully covered", "ok"],
   partially_payable: ["Partly covered", "warn"],
@@ -182,8 +187,20 @@ export default function Page() {
               <p className="sub">of {inr(claimed)} billed. You pay about {inr(claimed - pay)}.</p>
               <div className="bar" role="img" aria-label={`Insurer pays ${inr(pay)}, you pay ${inr(claimed - pay)}`}><i style={{ width: `${claimed ? (pay / claimed) * 100 : 0}%` }} /></div>
               <p>{res.explanation}</p>
-              <h3>How we worked it out</h3>
-              <ol className="steps">{res.steps.map((s, i) => <li key={i}><div><strong>{s.name}</strong><span>{s.note}</span></div><b>{inr(s.amount_after)}</b></li>)}</ol>
+              <h3>Why this amount?</h3>
+              <p className="hint">We start with your full bill and take things off, one step at a time. What is left at the end is what your insurer pays.</p>
+              <ol className="steps">
+                <li className="start"><div><strong>Your hospital bill</strong></div><b>{inr(claimed)}</b></li>
+                {res.steps.map((s, i) => {
+                  const before = i === 0 ? claimed : Number(res.steps[i - 1].amount_after);
+                  const off = before - Number(s.amount_after);
+                  return (
+                    <li key={i}><div><strong>{STEP_TITLE[s.name] || s.name}</strong><span>{s.note}</span></div>
+                      <b className={off > 0 ? "off" : "same"}>{off > 0 ? `− ${inr(off)}` : "no change"}</b></li>
+                  );
+                })}
+                <li className="end"><div><strong>Your insurer pays</strong></div><b>{inr(pay)}</b></li>
+              </ol>
               <details><summary>Where this comes from in your policy</summary>
                 {res.citations.map((c) => <blockquote key={c.clause_id}><strong>{c.title}</strong>{c.text}</blockquote>)}</details>
             </div>
