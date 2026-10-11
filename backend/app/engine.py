@@ -122,6 +122,7 @@ def compute(rules: Rules, facts: Facts, bill: Bill) -> Optional[Outcome]:
     steps.append(Step(name="Sum insured", amount_after=_q(payable), note=(f"The most your policy pays in a year is {_inr(rules.sum_insured.value)}, so the amount is capped." if capped else f"Within the most your policy pays in a year ({_inr(rules.sum_insured.value)})."), clause_ids=[rules.sum_insured.clause_id]))
 
     payable = _q(max(ZERO, payable))
-    verdict = "rejected" if payable <= 0 else "payable" if payable >= _q(claimed) else "partially_payable"
+    # reached only when nothing excluded the claim: a zero here means the bill is within the deductible, not "not covered"
+    verdict = "payable" if payable >= _q(claimed) else "partially_payable"
     all_ids = list(dict.fromkeys(cites + [i for s in steps for i in s.clause_ids]))
     return Outcome(verdict=verdict, payable=payable, claimed=_q(claimed), steps=steps, clause_ids=all_ids)

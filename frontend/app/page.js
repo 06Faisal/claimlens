@@ -93,7 +93,7 @@ export default function Page() {
     } catch (x) { setErr(x.message); } finally { setBusy(false); }
   }
 
-  const v = res?.status === "answered" ? VERDICT[res.verdict] : null;
+  const v = res?.status === "answered" ? (res.verdict !== "rejected" && Number(res.payable) === 0 ? ["Within your own share", "warn"] : VERDICT[res.verdict]) : null;
   const pay = res ? Number(res.payable) : 0, claimed = res ? Number(res.claimed) : 0;
   const clean = (n) => n.replace(/ \(.*\)/, "");
 

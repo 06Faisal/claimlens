@@ -56,3 +56,11 @@ def test_unclear_preexisting_message_tells_the_user_what_to_do():
                         ped_waiting_months=Cited(value=D(48), clause_id="securehealth-basic:4.2")))
     a = assess(req(pre_existing=None), CORPUS, llm)
     assert a.status == "abstained" and "Yes or No" in a.reason
+
+
+def test_bill_within_deductible_pays_nothing_but_is_not_reported_as_rejected():
+    a = run(req(room_days=0, associated_charges=3000, other_charges=2000),
+            deductible=Cited(value=D(5000), clause_id="securehealth-basic:3.3"),
+            copay_percent=Cited(value=D(10), clause_id="securehealth-basic:3.2"))
+    assert a.status == "answered" and a.payable == D("0.00") and a.verdict == "partially_payable"
+    assert "yours to pay" in a.steps[4].note

@@ -68,4 +68,4 @@ def test_unknown_ped_status_abstains():
 
 def test_payable_never_negative_or_above_claim():
     r = compute(Rules(sum_insured=cited(500000), deductible=cited(999999)), facts(), bill())
-    assert r.payable == 0 and r.verdict == "rejected"
+    assert r.payable == 0 and r.verdict == "partially_payable"  # within the deductible: nothing paid, but not "not covered"
